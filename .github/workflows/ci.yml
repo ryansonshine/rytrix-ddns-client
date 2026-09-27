@@ -59,8 +59,8 @@ jobs:
           sudo /tmp/rytrix-ddns setup --config /etc/rytrix-ddns.json --hostname ci-smoke-test --token fake || true
           sudo /tmp/rytrix-ddns install --config /etc/rytrix-ddns.json
           sleep 5
-          systemctl is-active rytrix-ddns
           sudo journalctl -u rytrix-ddns --no-pager | tail -5
+          systemctl is-active rytrix-ddns
           sudo /tmp/rytrix-ddns uninstall
           ! systemctl is-active rytrix-ddns
 

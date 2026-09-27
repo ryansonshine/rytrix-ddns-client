@@ -81,16 +81,17 @@ func printUsage(w io.Writer) {
 // flags parses the options shared by every command.
 func flags(name string, args []string, extra func(*flag.FlagSet)) (string, error) {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
-	defaultPath, err := config.DefaultPath()
-	if err != nil {
-		return "", err
-	}
+	// Services run without $HOME, so there may be no default; they always pass --config.
+	defaultPath, defaultErr := config.DefaultPath()
 	path := fs.String("config", defaultPath, "path to the config file")
 	if extra != nil {
 		extra(fs)
 	}
 	if err := fs.Parse(args); err != nil {
 		return "", err
+	}
+	if *path == "" {
+		return "", fmt.Errorf("no --config given and no default location: %w", defaultErr)
 	}
 	return filepath.Abs(*path)
 }
