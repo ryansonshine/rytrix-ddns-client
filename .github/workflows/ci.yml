@@ -43,13 +43,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+
+      - name: macOS launch daemon
+        if: runner.os == 'macOS'
+        run: |
+          go build -o /tmp/rytrix-ddns ./
+          sudo /tmp/rytrix-ddns setup --config /tmp/rytrix-ddns.json --hostname ci-smoke-test --token fake || true
+          sudo /tmp/rytrix-ddns install --config /tmp/rytrix-ddns.json
+          sleep 5
+          sudo tail -5 /Library/Logs/rytrix-ddns.log
+          sudo launchctl print system/com.rytrix.ddns | grep 'state = running'
+          sudo /tmp/rytrix-ddns uninstall
+          ! sudo launchctl print system/com.rytrix.ddns >/dev/null 2>&1
 
       - name: Linux systemd unit
         if: runner.os == 'Linux'

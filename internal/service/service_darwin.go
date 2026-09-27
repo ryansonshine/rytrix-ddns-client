@@ -12,9 +12,15 @@ import (
 
 const label = "com.rytrix.ddns"
 
-// A LaunchAgent runs as the user and needs no sudo. It starts at login, which covers
-// laptops and desktops; a Mac with no one logged in won't update.
+// Run with sudo, install writes a LaunchDaemon that starts at boot, for a Mac nobody logs
+// in to. Otherwise it writes a LaunchAgent, which needs no sudo but only runs while the
+// user is logged in.
+func system() bool { return os.Geteuid() == 0 }
+
 func plistPath() (string, error) {
+	if system() {
+		return "/Library/LaunchDaemons/" + label + ".plist", nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
@@ -23,8 +29,18 @@ func plistPath() (string, error) {
 }
 
 func logPath() string {
+	if system() {
+		return "/Library/Logs/rytrix-ddns.log"
+	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, "Library", "Logs", "rytrix-ddns.log")
+}
+
+func kind() string {
+	if system() {
+		return "boot daemon"
+	}
+	return "login agent"
 }
 
 func Install(exe, configPath string) (string, error) {
@@ -74,7 +90,7 @@ func Install(exe, configPath string) (string, error) {
 	if err := run("launchctl", "bootstrap", domain(), path); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("Installed a login agent (%s). Logs go to %s.", path, logPath()), nil
+	return fmt.Sprintf("Installed a %s (%s). Logs go to %s.", kind(), path, logPath()), nil
 }
 
 func Uninstall() (string, error) {
@@ -86,10 +102,13 @@ func Uninstall() (string, error) {
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return "", err
 	}
-	return "Removed the login agent.", nil
+	return "Removed the " + kind() + ".", nil
 }
 
 func domain() string {
+	if system() {
+		return "system"
+	}
 	return "gui/" + strconv.Itoa(os.Getuid())
 }
 

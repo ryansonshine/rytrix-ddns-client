@@ -36,7 +36,7 @@ rytrix-ddns install    # starts it automatically from now on
 
 | OS | How it runs | Logs |
 | --- | --- | --- |
-| macOS | a login agent (`~/Library/LaunchAgents/com.rytrix.ddns.plist`) | `~/Library/Logs/rytrix-ddns.log` |
+| macOS | a login agent (`~/Library/LaunchAgents`). With `sudo`, a boot daemon (`/Library/LaunchDaemons`) that runs with nobody logged in | `~/Library/Logs/rytrix-ddns.log`, or `/Library/Logs/rytrix-ddns.log` with `sudo` |
 | Linux | a systemd unit. System-wide with `sudo`, per-user otherwise | `journalctl -u rytrix-ddns` |
 | Windows | a Windows service. Run `install` from an administrator prompt | `%AppData%\rytrix-ddns\rytrix-ddns.log` |
 
