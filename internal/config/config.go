@@ -81,6 +81,12 @@ func Save(path string, c *Config) error {
 	return os.WriteFile(path, append(b, '\n'), 0o600)
 }
 
+// Prepare fills in defaults and validates, for callers that check a config before saving it.
+func (c *Config) Prepare() error {
+	c.applyDefaults()
+	return c.Validate()
+}
+
 func (c *Config) applyDefaults() {
 	if c.Server == "" {
 		c.Server = DefaultServer

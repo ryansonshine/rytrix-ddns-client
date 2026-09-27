@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-950: #0b1020;
+  --color-ink-900: #111831;
+  --color-ink-800: #1a2340;
+  --color-ink-700: #27325a;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  html { color-scheme: dark; }
+  input, textarea { user-select: text; }
+}
+
+@utility card {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in oklab, var(--color-ink-700) 80%, transparent);
+  background: color-mix(in oklab, var(--color-ink-900) 85%, transparent);
+}

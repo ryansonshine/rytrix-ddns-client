@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=rytrix DDNS
+Comment=Keeps your rytrix DDNS hostname pointed at this computer's public IP
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/RytrixDDNS %u
+Terminal=false
+Type=Application
+Icon=RytrixDDNS
+Categories=Network;Utility;
+StartupWMClass=RytrixDDNS
+
+ 

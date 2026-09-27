@@ -1,0 +1,17 @@
+name: Desktop
+
+on:
+  pull_request:
+    paths: ["desktop/**", "internal/**", "go.mod", ".github/workflows/desktop*.yml"]
+  push:
+    branches: [main]
+    paths: ["desktop/**", "internal/**", "go.mod", ".github/workflows/desktop*.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/desktop-build.yml
+    with:
+      version: 0.0.0-ci

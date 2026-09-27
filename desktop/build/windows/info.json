@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.1.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.1.0",
+			"CompanyName": "rytrix",
+			"FileDescription": "Keeps your rytrix DDNS hostname pointed at this computer's public IP",
+			"LegalCopyright": "(c) 2026 Ryan Sonshine",
+			"ProductName": "rytrix DDNS",
+			"Comments": "https://ddns.rytrix.com"
+		}
+	}
+}

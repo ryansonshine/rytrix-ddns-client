@@ -16,3 +16,28 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+
+  - package-ecosystem: gomod
+    directory: /desktop
+    schedule:
+      interval: weekly
+    groups:
+      desktop-go:
+        update-types: [minor, patch]
+    # Wails v3 is in beta and pinned on purpose; bump it by hand after reading its release notes.
+    ignore:
+      - dependency-name: github.com/wailsapp/wails/v3
+
+  - package-ecosystem: npm
+    directory: /desktop/frontend
+    schedule:
+      interval: weekly
+    groups:
+      desktop-vite:
+        patterns: ["vite", "@vitejs/*", "@tailwindcss/*", "tailwindcss"]
+      desktop-react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      desktop-web:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "@wailsio/runtime"
