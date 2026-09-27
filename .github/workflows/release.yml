@@ -23,3 +23,26 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Runs the published install scripts against the release that was just made.
+  verify-install:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: install.sh
+        if: runner.os != 'Windows'
+        run: |
+          sh install.sh
+          rytrix-ddns version | grep -F "${GITHUB_REF_NAME#v}"
+      - name: install.ps1
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./install.ps1
+          $out = & "$env:LOCALAPPDATA\Programs\rytrix-ddns\rytrix-ddns.exe" version
+          if ($out -notmatch [regex]::Escape($env:GITHUB_REF_NAME.TrimStart('v'))) { throw "installed $out" }
