@@ -1,0 +1,190 @@
+name: Desktop build
+
+# Builds the tray app on each platform's own runner, because the native webviews need CGO
+# on macOS and Linux. Called by desktop.yml for PRs and by release.yml for tags.
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      sign:
+        description: Sign and notarize the macOS app
+        type: boolean
+        default: false
+    secrets:
+      MACOS_CERTIFICATE_P12:
+        required: false
+      MACOS_CERTIFICATE_PASSWORD:
+        required: false
+      APPLE_API_KEY_P8:
+        required: false
+      APPLE_API_KEY_ID:
+        required: false
+      APPLE_API_ISSUER_ID:
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  WAILS_VERSION: v3.0.0-beta.26
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@$WAILS_VERSION
+      - name: Work out the version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "APP_VERSION=${INPUT_VERSION#v}" >> "$GITHUB_ENV"
+
+      - name: Build the universal app (Intel and Apple Silicon)
+        run: |
+          for key in CFBundleShortVersionString CFBundleVersion; do
+            /usr/libexec/PlistBuddy -c "Set :$key $APP_VERSION" build/darwin/Info.plist
+          done
+          wails3 task darwin:package:universal VERSION=$APP_VERSION
+
+      - name: Sign with the Developer ID
+        if: inputs.sign
+        env:
+          CERT_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(openssl rand -hex 16)"
+          echo "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+
+          identity="$(security find-identity -v -p codesigning "$keychain" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')"
+          if [ -z "$identity" ]; then echo "No Developer ID Application certificate in MACOS_CERTIFICATE_P12" >&2; exit 1; fi
+          echo "Signing as $identity"
+          echo "SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+
+          # Hardened runtime and a secure timestamp are what notarization requires.
+          codesign --force --options runtime --timestamp --sign "$identity" bin/RytrixDDNS.app
+          codesign --verify --strict --verbose=2 bin/RytrixDDNS.app
+
+      - name: Make the disk image
+        run: wails3 task darwin:create:dmg
+
+      - name: Notarize and staple
+        if: inputs.sign
+        env:
+          API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          codesign --force --timestamp --sign "$SIGN_IDENTITY" bin/RytrixDDNS.dmg
+          echo "$API_KEY_P8" > "$RUNNER_TEMP/key.p8"
+          xcrun notarytool submit bin/RytrixDDNS.dmg --key "$RUNNER_TEMP/key.p8" --key-id "$API_KEY_ID" --issuer "$API_ISSUER_ID" --wait --timeout 30m
+          rm "$RUNNER_TEMP/key.p8"
+          xcrun stapler staple bin/RytrixDDNS.dmg
+          spctl --assess --type open --context context:primary-signature --verbose=2 bin/RytrixDDNS.dmg
+
+      - run: mkdir -p dist && cp bin/RytrixDDNS.dmg dist/rytrix-ddns-desktop_macos_universal.dmg
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: desktop-macos
+          path: desktop/dist/*
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@$WAILS_VERSION
+      - name: Work out the version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "APP_VERSION=${INPUT_VERSION#v}" >> "$GITHUB_ENV"
+      - name: Put NSIS on the PATH
+        run: |
+          if ! command -v makensis >/dev/null; then
+            if [ ! -x "/c/Program Files (x86)/NSIS/makensis.exe" ]; then choco install nsis -y --no-progress; fi
+            echo "C:\\Program Files (x86)\\NSIS" >> "$GITHUB_PATH"
+          fi
+
+      - name: Build the installer
+        run: wails3 task windows:package VERSION=$APP_VERSION
+
+      - run: mkdir -p dist && cp bin/RytrixDDNS-amd64-installer.exe dist/rytrix-ddns-desktop_windows_amd64_setup.exe
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: desktop-windows
+          path: desktop/dist/*
+
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Install GTK 4, WebKitGTK 6 and AppImage tooling
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libfuse2t64 file
+      - run: go install github.com/wailsapp/wails/v3/cmd/wails3@$WAILS_VERSION
+      - name: Work out the version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "APP_VERSION=${INPUT_VERSION#v}" >> "$GITHUB_ENV"
+
+      - name: Build the AppImage and .deb
+        run: VERSION=$APP_VERSION wails3 task linux:package VERSION=$APP_VERSION
+
+      - name: Collect the packages
+        run: |
+          mkdir -p dist
+          cp bin/*.AppImage "dist/rytrix-ddns-desktop_linux_${{ matrix.arch }}.AppImage"
+          cp bin/*.deb "dist/rytrix-ddns-desktop_linux_${{ matrix.arch }}.deb"
+          ls -la dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: desktop-linux-${{ matrix.arch }}
+          path: desktop/dist/*
