@@ -142,7 +142,11 @@ jobs:
       - name: Build the installer
         run: wails3 task windows:package ARCH=${{ matrix.arch }} VERSION=$APP_VERSION
 
-      - run: mkdir -p dist && cp bin/RytrixDDNS-${{ matrix.arch }}-installer.exe dist/rytrix-ddns-desktop_windows_${{ matrix.arch }}_setup.exe
+      - name: Collect the installer and the portable .exe
+        run: |
+          mkdir -p dist
+          cp bin/RytrixDDNS-${{ matrix.arch }}-installer.exe dist/rytrix-ddns-desktop_windows_${{ matrix.arch }}_setup.exe
+          cp bin/RytrixDDNS.exe dist/rytrix-ddns-desktop_windows_${{ matrix.arch }}.exe
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: desktop-windows-${{ matrix.arch }}
