@@ -17,6 +17,11 @@ archives:
         formats: [zip]
     files: [README.md, LICENSE]
 
+  # The bare executables too, for direct download from the website.
+  - id: binaries
+    name_template: "rytrix-ddns_{{ .Os }}_{{ .Arch }}"
+    formats: [binary]
+
 checksum:
   name_template: checksums.txt
 

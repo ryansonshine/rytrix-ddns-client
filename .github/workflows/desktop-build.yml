@@ -108,6 +108,11 @@ jobs:
           path: desktop/dist/*
 
   windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows builds need no CGO, so ARM64 cross-compiles on the x64 runner.
+        arch: [amd64, arm64]
     runs-on: windows-latest
     defaults:
       run:
@@ -135,12 +140,16 @@ jobs:
           fi
 
       - name: Build the installer
-        run: wails3 task windows:package VERSION=$APP_VERSION
+        run: wails3 task windows:package ARCH=${{ matrix.arch }} VERSION=$APP_VERSION
 
-      - run: mkdir -p dist && cp bin/RytrixDDNS-amd64-installer.exe dist/rytrix-ddns-desktop_windows_amd64_setup.exe
+      - name: Collect the installer and the portable .exe
+        run: |
+          mkdir -p dist
+          cp bin/RytrixDDNS-${{ matrix.arch }}-installer.exe dist/rytrix-ddns-desktop_windows_${{ matrix.arch }}_setup.exe
+          cp bin/RytrixDDNS.exe dist/rytrix-ddns-desktop_windows_${{ matrix.arch }}.exe
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: desktop-windows
+          name: desktop-windows-${{ matrix.arch }}
           path: desktop/dist/*
 
   linux:
@@ -175,14 +184,17 @@ jobs:
           INPUT_VERSION: ${{ inputs.version }}
         run: echo "APP_VERSION=${INPUT_VERSION#v}" >> "$GITHUB_ENV"
 
-      - name: Build the AppImage and .deb
-        run: VERSION=$APP_VERSION wails3 task linux:package VERSION=$APP_VERSION
+      - name: Build the AppImage, .deb and .rpm
+        run: |
+          VERSION=$APP_VERSION wails3 task linux:package VERSION=$APP_VERSION
+          VERSION=$APP_VERSION wails3 task linux:create:rpm VERSION=$APP_VERSION
 
       - name: Collect the packages
         run: |
           mkdir -p dist
           cp bin/*.AppImage "dist/rytrix-ddns-desktop_linux_${{ matrix.arch }}.AppImage"
           cp bin/*.deb "dist/rytrix-ddns-desktop_linux_${{ matrix.arch }}.deb"
+          cp bin/*.rpm "dist/rytrix-ddns-desktop_linux_${{ matrix.arch }}.rpm"
           ls -la dist
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
