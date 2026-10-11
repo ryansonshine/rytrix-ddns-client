@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/ryansonshine/rytrix-ddns-client v0.0.0
 	github.com/wailsapp/wails/v3 v3.0.0-beta.26
-	golang.org/x/sys v0.48.0
+	golang.org/x/sys v0.49.0
 )
 
 replace github.com/ryansonshine/rytrix-ddns-client => ../
