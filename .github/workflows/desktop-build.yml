@@ -42,7 +42,7 @@ jobs:
         with:
           go-version-file: desktop/go.mod
           cache-dependency-path: desktop/go.sum
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@$WAILS_VERSION
@@ -102,7 +102,7 @@ jobs:
           spctl --assess --type open --context context:primary-signature --verbose=2 bin/RytrixDDNS.dmg
 
       - run: mkdir -p dist && cp bin/RytrixDDNS.dmg dist/rytrix-ddns-desktop_macos_universal.dmg
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: desktop-macos
           path: desktop/dist/*
@@ -124,7 +124,7 @@ jobs:
         with:
           go-version-file: desktop/go.mod
           cache-dependency-path: desktop/go.sum
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       - run: go install github.com/wailsapp/wails/v3/cmd/wails3@$WAILS_VERSION
@@ -147,7 +147,7 @@ jobs:
           mkdir -p dist
           cp bin/RytrixDDNS-${{ matrix.arch }}-installer.exe dist/rytrix-ddns-desktop_windows_${{ matrix.arch }}_setup.exe
           cp bin/RytrixDDNS.exe dist/rytrix-ddns-desktop_windows_${{ matrix.arch }}.exe
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: desktop-windows-${{ matrix.arch }}
           path: desktop/dist/*
@@ -171,7 +171,7 @@ jobs:
         with:
           go-version-file: desktop/go.mod
           cache-dependency-path: desktop/go.sum
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       - name: Install GTK 4, WebKitGTK 6 and AppImage tooling
@@ -196,7 +196,7 @@ jobs:
           cp bin/*.deb "dist/rytrix-ddns-desktop_linux_${{ matrix.arch }}.deb"
           cp bin/*.rpm "dist/rytrix-ddns-desktop_linux_${{ matrix.arch }}.rpm"
           ls -la dist
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: desktop-linux-${{ matrix.arch }}
           path: desktop/dist/*
